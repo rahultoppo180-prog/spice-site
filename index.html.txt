@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spice & Ember Kitchen — QR Digital Table Menu</title>
+
+  <!-- Google Fonts: Playfair Display for warm culinary elegance & Inter for crisp UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- QRCode.js for dynamic scannable QR generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif'],
+          },
+          colors: {
+            ember: {
+              50: '#fff8f1',
+              100: '#feecdc',
+              200: '#fcd9bd',
+              300: '#fdba8c',
+              400: '#ff8a4c',
+              500: '#ff5a1f',
+              600: '#d03801',
+              700: '#b43403',
+              800: '#8a2c0d',
+              900: '#771d1d',
+              950: '#26120b',
+            },
+            charcoal: {
+              900: '#181412',
+              800: '#241e1b',
+              700: '#332b26',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Custom scrollbar hiding for horizontal category pills on mobile */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Subtle pulse animation for live order status */
+    @keyframes softPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.05); }
+    }
+    .animate-soft-pulse {
+      animation: softPulse 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-stone-50 text-stone-900 font-sans antialiased selection:bg-ember-200 selection:text-ember-900 pb-28 lg:pb-12">
+
+  <!-- ===================================================================== -->
+  <!-- TOP STICKY NAVIGATION BAR                                             -->
+  <!-- ===================================================================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ember-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-ember-500/20 shrink-0">
+          <!-- Flame / Culinary Icon SVG -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <h1 class="font-serif font-bold text-lg sm:text-xl text-stone-900 leading-tight truncate">Spice & Ember</h1>
+          <p class="text-[11px] text-stone-500 font-medium tracking-wide uppercase">Kitchen & Tandoor</p>
+        </div>
+      </div>
+
+      <!-- Right Action Controls: Table Selector, QR Code Modal Button, Active Order Tracker & Cart -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <!-- Table Number Selector Pill -->
+        <button id="tableSelectorBtn" onclick="openTableModal()" class="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer" title="Change Table Number">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Table <span id="headerTableNumber">#04</span></span>
+          <svg class="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- View QR Code Button -->
+        <button onclick="openQrModal()" class="flex items-center gap-1.5 bg-stone-900 hover:bg-stone-800 text-white px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium shadow-sm transition cursor-pointer" title="View & Share Table QR Code">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          <span class="hidden sm:inline">View QR</span>
+        </button>
+
+        <!-- Active Order Status Pill (Hidden until an order is placed) -->
+        <button id="activeOrderNavBtn" onclick="openTrackerModal()" class="hidden items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition cursor-pointer">
+          <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+          <span>Live Order</span>
+        </button>
+
+        <!-- Desktop Cart Button -->
+        <button onclick="toggleCartDrawer(true)" class="hidden lg:flex items-center gap-2 bg-ember-600 hover:bg-ember-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <span>Cart</span>
+          <span id="desktopCartBadge" class="bg-white text-ember-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- HERO BANNER SECTION                                                   -->
+  <!-- ===================================================================== -->
+  <section class="relative bg-charcoal-900 text-white overflow-hidden">
+    <!-- Background Warm Ambient Image with Fallback Gradient -->
+    <div class="absolute inset-0">
+      <img
+        src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80"
+        onerror="this.style.display='none'"
+        alt="Spice & Ember Kitchen Interior"
+        class="w-full h-full object-cover opacity-35"
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-charcoal-900 via-charcoal-900/75 to-charcoal-900/40"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-16">
+      <div class="max-w-2xl">
+        <!-- QR Scan Session Badge -->
+        <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-full px-3.5 py-1.5 text-xs sm:text-sm text-amber-200 mb-4">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Connected via QR • Ordering for <strong id="heroTableLabel" class="text-white font-semibold">Table #04</strong></span>
+        </div>
+
+        <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
+          Authentic Wood-Fired Flavors, Served Fresh to Your Table.
+        </h2>
+        <p class="mt-3 text-sm sm:text-base text-stone-300 leading-relaxed max-w-xl">
+          Browse our handcrafted Indian & global specialties, customize your spice preferences, and pay seamlessly right from your phone—no waiting required.
+        </p>
+
+        <!-- Quick Hero Actions & Restaurant Info -->
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <a href="#menuSection" class="inline-flex items-center gap-2 bg-ember-600 hover:bg-ember-500 text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-ember-600/30 transition text-sm">
+            <span>Explore Menu</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </a>
+          <button onclick="openQrModal()" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-medium px-4 py-3 rounded-xl transition text-sm cursor-pointer">
+            <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+            <span>Table QR Code</span>
+          </button>
+        </div>
+
+        <!-- Highlights Strip -->
+        <div class="mt-8 pt-6 border-t border-white/10 grid grid-cols-3 gap-4 max-w-md text-xs sm:text-sm">
+          <div>
+            <p class="text-amber-400 font-bold text-base sm:text-lg">4.9 ★</p>
+            <p class="text-stone-400">1,200+ Diners</p>
+          </div>
+          <div>
+            <p class="text-amber-400 font-bold text-base sm:text-lg">15–20 min</p>
+            <p class="text-stone-400">Avg. Prep Time</p>
+          </div>
+          <div>
+            <p class="text-amber-400 font-bold text-base sm:text-lg">100% Fresh</p>
+            <p class="text-stone-400">Made to Order</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN CONTENT: SEARCH, FILTERS, DIGITAL MENU & DESKTOP SIDEBAR CART    -->
+  <!-- ===================================================================== -->
+  <main id="menuSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+    <div class="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+
+      <!-- LEFT COLUMN (Menu Controls + Dish Cards) -->
+      <div class="lg:col-span-8">
+
+        <!-- Sticky Search & Filter Controls -->
+        <div class="sticky top-16 z-30 bg-stone-50/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-stone-200/70">
+          <!-- Search Bar -->
+          <div class="relative">
+            <svg class="w-5 h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              id="menuSearchInput"
+              oninput="handleSearch(this.value)"
+              placeholder="Search dishes, ingredients, or spices (e.g., Paneer, Biryani, Naan)..."
+              class="w-full pl-11 pr-10 py-3 bg-white border border-stone-200 rounded-2xl text-sm text-stone-800 placeholder-stone-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500 transition"
+            />
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1 cursor-pointer" title="Clear search">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Dietary Filter Pills (All, Pure Veg, Non-Veg, Chef's Special) -->
+          <div class="flex items-center gap-2 overflow-x-auto no-scrollbar mt-3 pb-1">
+            <button onclick="setDietaryFilter('all')" id="diet-all" class="diet-pill active shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer bg-stone-900 text-white border-stone-900">
+              All Dishes
+            </button>
+            <button onclick="setDietaryFilter('veg')" id="diet-veg" class="diet-pill shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-emerald-50 transition cursor-pointer">
+              <span class="w-3.5 h-3.5 border border-emerald-600 rounded-sm flex items-center justify-center">
+                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+              </span>
+              Pure Veg
+            </button>
+            <button onclick="setDietaryFilter('non-veg')" id="diet-non-veg" class="diet-pill shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-rose-50 transition cursor-pointer">
+              <span class="w-3.5 h-3.5 border border-rose-600 rounded-sm flex items-center justify-center">
+                <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+              </span>
+              Non-Veg
+            </button>
+            <button onclick="setDietaryFilter('special')" id="diet-special" class="diet-pill shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-stone-200 bg-white text-stone-700 hover:bg-amber-50 transition cursor-pointer">
+              <span class="text-amber-500">★</span>
+              Chef's Special
+            </button>
+          </div>
+
+          <!-- Category Tabs -->
+          <div id="categoryTabsContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar mt-2.5 pt-1">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
+
+        <!-- Menu Section Header -->
+        <div class="flex items-center justify-between mt-6 mb-4">
+          <div>
+            <h3 id="currentCategoryTitle" class="font-serif text-xl sm:text-2xl font-bold text-stone-900">All Menu Items</h3>
+            <p id="dishCountSubtitle" class="text-xs sm:text-sm text-stone-500 mt-0.5">Showing 14 freshly prepared dishes</p>
+          </div>
+        </div>
+
+        <!-- Menu Grid -->
+        <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <!-- Dynamically populated by JS -->
+        </div>
+
+        <!-- Empty Search State -->
+        <div id="emptyMenuState" class="hidden text-center py-14 px-4 bg-white rounded-3xl border border-stone-200/80 mt-4">
+          <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 text-2xl">
+            🍽️
+          </div>
+          <h4 class="font-serif text-lg font-bold text-stone-900">No matching dishes found</h4>
+          <p class="text-sm text-stone-500 mt-1 max-w-sm mx-auto">Try adjusting your search keywords or clearing your dietary/category filters.</p>
+          <button onclick="resetAllFilters()" class="mt-4 px-4 py-2 bg-ember-600 hover:bg-ember-700 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+            Reset All Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: DESKTOP STICKY CART & ORDER SUMMARY -->
+      <aside class="hidden lg:block lg:col-span-4 sticky top-24">
+        <div class="bg-white rounded-3xl border border-stone-200/90 shadow-lg shadow-stone-200/40 overflow-hidden">
+          <div class="bg-charcoal-900 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 class="font-serif font-bold text-lg">Your Table Order</h3>
+              <p class="text-xs text-amber-300">Serving <span id="desktopCartTableLabel">Table #04</span></p>
+            </div>
+            <span id="desktopSidebarCount" class="bg-ember-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">0 items</span>
+          </div>
+
+          <!-- Cart Items Container (Desktop) -->
+          <div id="desktopCartContainer" class="p-5 max-h-[58vh] overflow-y-auto">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MOBILE FLOATING STICKY BOTTOM CART BAR                                -->
+  <!-- ===================================================================== -->
+  <div id="mobileStickyCartBar" class="lg:hidden fixed bottom-4 inset-x-4 z-40 transition-all duration-300 translate-y-28 opacity-0 pointer-events-none">
+    <button onclick="toggleCartDrawer(true)" class="w-full bg-charcoal-900 hover:bg-charcoal-800 text-white rounded-2xl p-3.5 shadow-2xl shadow-charcoal-900/40 border border-white/10 flex items-center justify-between cursor-pointer">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-ember-600 flex items-center justify-center font-bold text-sm" id="mobileBarItemCount">
+          0
+        </div>
+        <div class="text-left">
+          <p class="text-xs text-stone-300 font-medium">Table <span id="mobileBarTableNum">#04</span> • View Order</p>
+          <p class="text-base font-bold text-white" id="mobileBarTotal">₹0</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 bg-ember-600 px-4 py-2 rounded-xl text-sm font-semibold">
+        <span>Review & Pay</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </button>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- SLIDE-OUT CART DRAWER (MOBILE & TABLET / QUICK VIEW)                  -->
+  <!-- ===================================================================== -->
+  <div id="cartDrawerBackdrop" onclick="toggleCartDrawer(false)" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden transition-opacity"></div>
+  <div id="cartDrawer" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <!-- Drawer Header -->
+    <div class="bg-charcoal-900 text-white px-5 py-4 flex items-center justify-between shrink-0">
+      <div>
+        <h3 class="font-serif font-bold text-lg">Your Table Order</h3>
+        <p class="text-xs text-amber-300">Table <span id="drawerTableLabel">#04</span> • Instant Kitchen Dispatch</p>
+      </div>
+      <button onclick="toggleCartDrawer(false)" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer" aria-label="Close Cart">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Scrollable Body -->
+    <div id="drawerCartContainer" class="flex-1 overflow-y-auto p-5">
+      <!-- Rendered dynamically by JS -->
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- QR CODE VIEW & SHARE MODAL                                            -->
+  <!-- ===================================================================== -->
+  <div id="qrModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-100 text-center relative animate-[fadeIn_0.2s_ease-out]">
+      <button onclick="closeQrModal()" class="absolute top-4 right-4 p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 transition cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-bold mb-3">
+        <span>SCAN TO ORDER AT TABLE</span>
+      </div>
+      <h3 class="font-serif text-2xl font-bold text-stone-900">Spice & Ember Kitchen</h3>
+      <p class="text-sm text-stone-500 mt-1">Table <span id="qrModalTableNumber" class="font-bold text-ember-600">#04</span> • Digital Menu QR</p>
+
+      <!-- Dynamic QR Code Box -->
+      <div class="my-5 p-4 bg-white border-2 border-dashed border-amber-300 rounded-2xl inline-flex flex-col items-center justify-center shadow-inner">
+        <div id="qrcodeCanvas" class="p-2 bg-white rounded-xl"></div>
+        <span class="text-[11px] font-mono text-stone-400 mt-2" id="qrUrlPreview">spiceandember.menu/?table=04</span>
+      </div>
+
+      <p class="text-xs text-stone-500 leading-relaxed mb-4">
+        Share this QR code with guests at your table so everyone can browse and add dishes together.
+      </p>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="copyTableLink()" class="flex items-center justify-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold py-2.5 px-3 rounded-xl text-xs transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span id="copyLinkText">Copy Link</span>
+        </button>
+        <button onclick="closeQrModal()" class="bg-ember-600 hover:bg-ember-700 text-white font-semibold py-2.5 px-3 rounded-xl text-xs transition cursor-pointer">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TABLE NUMBER SELECTOR MODAL                                           -->
+  <!-- ===================================================================== -->
+  <div id="tableModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-100 relative">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-serif text-xl font-bold text-stone-900">Select Your Table</h3>
+          <p class="text-xs text-stone-500">Choose the table number printed on your QR stand</p>
+        </div>
+        <button onclick="closeTableModal()" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div id="tableGrid" class="grid grid-cols-4 gap-2.5 my-4">
+        <!-- Populated by JS (Tables 01 to 16) -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- INTEGRATED CHECKOUT & PAYMENT MODAL                                   -->
+  <!-- ===================================================================== -->
+  <div id="checkoutModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center sm:p-4 bg-black/75 backdrop-blur-xs">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Checkout Header -->
+      <div class="bg-charcoal-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div>
+          <span class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Secure Table Checkout</span>
+          <h3 class="font-serif text-xl font-bold">Complete Your Payment</h3>
+        </div>
+        <button onclick="closeCheckoutModal()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Checkout Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <!-- Bill Summary Pill -->
+        <div class="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-stone-600 font-medium">Table <span id="checkoutTableNum" class="font-bold text-stone-900">#04</span> • <span id="checkoutItemCount">0</span> Items</p>
+            <p class="text-xs text-stone-500 mt-0.5">Includes 5% GST & Kitchen Packaging</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-stone-500 block">Payable Amount</span>
+            <span id="checkoutPayableTotal" class="text-2xl font-bold text-ember-700">₹0</span>
+          </div>
+        </div>
+
+        <!-- Guest Name / Phone (Optional for digital receipt) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1">Your Name (Optional)</label>
+            <input type="text" id="guestNameInput" placeholder="e.g., Aarav Sharma" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1">Mobile for SMS Receipt</label>
+            <input type="tel" id="guestPhoneInput" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+          </div>
+        </div>
+
+        <!-- Payment Method Selector Tabs -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2.5">Select Payment Method</label>
+          <div class="grid grid-cols-3 gap-2.5">
+            <button type="button" onclick="selectPaymentMethod('upi')" id="payTab-upi" class="pay-method-tab flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-ember-600 bg-ember-50/70 text-ember-900 transition cursor-pointer">
+              <span class="text-xl mb-1">📱</span>
+              <span class="text-xs font-bold">UPI / QR</span>
+            </button>
+            <button type="button" onclick="selectPaymentMethod('card')" id="payTab-card" class="pay-method-tab flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition cursor-pointer">
+              <span class="text-xl mb-1">💳</span>
+              <span class="text-xs font-bold">Card</span>
+            </button>
+            <button type="button" onclick="selectPaymentMethod('cash')" id="payTab-cash" class="pay-method-tab flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-stone-200 bg-white text-stone-700 hover:bg-stone-50 transition cursor-pointer">
+              <span class="text-xl mb-1">💵</span>
+              <span class="text-xs font-bold">Pay at Table</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PAYMENT PANEL 1: UPI -->
+        <div id="payPanel-upi" class="space-y-4 bg-stone-50 p-4 rounded-2xl border border-stone-200/80">
+          <div>
+            <p class="text-xs font-semibold text-stone-700 mb-2">Quick Pay via UPI App</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="selectUpiApp('GPay')" class="upi-app-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-white border border-stone-200 hover:border-ember-500 rounded-xl text-xs font-bold text-stone-800 shadow-2xs transition cursor-pointer">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> GPay
+              </button>
+              <button type="button" onclick="selectUpiApp('PhonePe')" class="upi-app-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-white border border-stone-200 hover:border-ember-500 rounded-xl text-xs font-bold text-stone-800 shadow-2xs transition cursor-pointer">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span> PhonePe
+              </button>
+              <button type="button" onclick="selectUpiApp('Paytm')" class="upi-app-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-white border border-stone-200 hover:border-ember-500 rounded-xl text-xs font-bold text-stone-800 shadow-2xs transition cursor-pointer">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span> Paytm
+              </button>
+            </div>
+          </div>
+
+          <div class="relative flex py-1 items-center">
+            <div class="grow border-t border-stone-200"></div>
+            <span class="shrink mx-3 text-[11px] text-stone-400 font-medium uppercase">Or enter UPI ID</span>
+            <div class="grow border-t border-stone-200"></div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1">UPI ID / VPA</label>
+            <input type="text" id="upiIdInput" placeholder="username@okicici or mobile@ybl" class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+            <p id="upiErrorMsg" class="hidden text-xs text-rose-600 mt-1 font-medium">Please enter a valid UPI ID (e.g., name@upi) or select a UPI app above.</p>
+          </div>
+
+          <!-- Simulated Merchant UPI QR -->
+          <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-stone-200">
+            <div id="upiMerchantQr" class="shrink-0"></div>
+            <div class="text-xs text-stone-600">
+              <p class="font-bold text-stone-900">Scan Merchant UPI QR</p>
+              <p class="text-stone-500 mt-0.5">UPI ID: <span class="font-mono text-stone-700">spiceember@icici</span></p>
+              <p class="text-[11px] text-emerald-600 font-medium mt-1">✓ Zero convenience fee</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAYMENT PANEL 2: CREDIT / DEBIT CARD -->
+        <div id="payPanel-card" class="hidden space-y-3 bg-stone-50 p-4 rounded-2xl border border-stone-200/80">
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1">Card Number</label>
+            <input type="text" id="cardNumberInput" maxlength="19" oninput="formatCardNumber(this)" placeholder="4532 •••• •••• 8890" class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-stone-700 mb-1">Expiry (MM/YY)</label>
+              <input type="text" id="cardExpiryInput" maxlength="5" oninput="formatCardExpiry(this)" placeholder="08/29" class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-stone-700 mb-1">CVV</label>
+              <input type="password" id="cardCvvInput" maxlength="4" placeholder="•••" class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1">Cardholder Name</label>
+            <input type="text" id="cardNameInput" placeholder="Name on Card" class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500" />
+          </div>
+          <p id="cardErrorMsg" class="hidden text-xs text-rose-600 font-medium">Please fill in valid card number, expiry date, and CVV.</p>
+        </div>
+
+        <!-- PAYMENT PANEL 3: PAY AT COUNTER / CASH ON TABLE -->
+        <div id="payPanel-cash" class="hidden bg-stone-50 p-4 rounded-2xl border border-stone-200/80">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg shrink-0">
+              🛎️
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-stone-900">Pay via Cash or Card Machine at Table</h4>
+              <p class="text-xs text-stone-600 mt-1 leading-relaxed">
+                Your order will be sent straight to our kitchen right now. Our server will bring the bill & POS machine to <strong id="cashPanelTable">Table #04</strong> when you're ready.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checkout Footer Submit Button -->
+      <div class="p-4 sm:p-5 bg-white border-t border-stone-200 shrink-0">
+        <button id="confirmPaymentBtn" onclick="processOrderPayment()" class="w-full bg-ember-600 hover:bg-ember-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-ember-600/25 flex items-center justify-center gap-2 transition cursor-pointer">
+          <span id="confirmPaymentBtnText">Pay ₹0 & Place Order</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- ORDER CONFIRMATION & LIVE ORDER TRACKER MODAL                         -->
+  <!-- ===================================================================== -->
+  <div id="trackerModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center sm:p-4 bg-black/75 backdrop-blur-xs">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Tracker Header -->
+      <div class="bg-emerald-700 text-white px-6 py-5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-xs text-emerald-100 font-medium">Order Confirmed • <span id="trackerTableLabel">Table #04</span></span>
+            <h3 class="font-serif text-xl font-bold" id="trackerOrderId">Order #SE-4821</h3>
+          </div>
+        </div>
+        <button onclick="closeTrackerModal()" class="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Tracker Scrollable Content -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <!-- Estimated Time Banner -->
+        <div class="bg-stone-900 text-white rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-stone-400">Estimated Serving Time</p>
+            <p class="text-xl font-bold text-amber-400 mt-0.5" id="trackerEstTime">15–20 Mins</p>
+          </div>
+          <div class="text-right">
+            <span id="trackerPaymentBadge" class="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold px-2.5 py-1 rounded-lg">
+              Paid via UPI
+            </span>
+          </div>
+        </div>
+
+        <!-- Live 3-Step Order Status Progression -->
+        <div class="bg-stone-50 border border-stone-200/80 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500">Live Kitchen Status</h4>
+            <button onclick="advanceOrderStage()" id="simulateStageBtn" class="text-[11px] font-semibold text-ember-600 hover:text-ember-700 underline cursor-pointer">
+              Simulate Next Stage →
+            </button>
+          </div>
+
+          <div class="space-y-4 relative">
+            <!-- Step 1: Order Placed -->
+            <div class="flex items-start gap-3.5" id="step-1">
+              <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
+                ✓
+              </div>
+              <div class="pt-0.5">
+                <p class="text-sm font-bold text-stone-900">Order Placed</p>
+                <p class="text-xs text-stone-500">Ticket received by Spice & Ember Kitchen.</p>
+              </div>
+            </div>
+
+            <!-- Step 2: Preparing -->
+            <div class="flex items-start gap-3.5" id="step-2">
+              <div id="step2Circle" class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0 animate-soft-pulse">
+                2
+              </div>
+              <div class="pt-0.5">
+                <p id="step2Title" class="text-sm font-bold text-stone-900">Preparing Your Food</p>
+                <p id="step2Desc" class="text-xs text-stone-500">Our chefs are firing up the tandoor & fresh spices.</p>
+              </div>
+            </div>
+
+            <!-- Step 3: Ready to Serve -->
+            <div class="flex items-start gap-3.5 opacity-45" id="step-3">
+              <div id="step3Circle" class="w-8 h-8 rounded-full bg-stone-300 text-stone-700 flex items-center justify-center text-xs font-bold shrink-0">
+                3
+              </div>
+              <div class="pt-0.5">
+                <p id="step3Title" class="text-sm font-bold text-stone-900">Ready to Serve</p>
+                <p id="step3Desc" class="text-xs text-stone-500">Plated hot and heading directly to your table.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Itemized Digital Receipt -->
+        <div class="border border-stone-200 rounded-2xl overflow-hidden">
+          <div class="bg-stone-100 px-4 py-2.5 border-b border-stone-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-stone-700 uppercase tracking-wider">Digital Receipt</span>
+            <span id="receiptTimestamp" class="text-[11px] text-stone-500">Just now</span>
+          </div>
+          <div id="receiptItemsList" class="p-4 space-y-2.5 text-sm">
+            <!-- Populated by JS -->
+          </div>
+          <div id="receiptSpecialNote" class="hidden px-4 pb-3 text-xs text-amber-800 bg-amber-50/60 border-t border-amber-100 pt-2">
+            <!-- Cooking instructions -->
+          </div>
+          <div class="bg-stone-50 px-4 py-3 border-t border-stone-200 space-y-1 text-xs">
+            <div class="flex justify-between text-stone-500">
+              <span>Item Subtotal</span>
+              <span id="receiptSubtotal">₹0</span>
+            </div>
+            <div class="flex justify-between text-stone-500">
+              <span>GST (5%)</span>
+              <span id="receiptGst">₹0</span>
+            </div>
+            <div class="flex justify-between text-sm font-bold text-stone-900 pt-1.5 border-t border-stone-200/80">
+              <span>Total Amount</span>
+              <span id="receiptTotal">₹0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 bg-white border-t border-stone-200 shrink-0 flex gap-3">
+        <button onclick="closeTrackerModal()" class="flex-1 bg-stone-900 hover:bg-stone-800 text-white font-semibold py-3 rounded-xl text-sm transition cursor-pointer">
+          Order More Items
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- NON-INTRUSIVE TOAST NOTIFICATION                                      -->
+  <!-- ===================================================================== -->
+  <div id="toastNotification" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white px-4 py-2.5 rounded-full shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2 transition-all duration-300 opacity-0 -translate-y-4 pointer-events-none">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toastMessage">Added to your table order</span>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC                                          -->
+  <!-- ===================================================================== -->
+  <script>
+    // -----------------------------------------------------------------------
+    // 1. MENU DATASET (Authentic Culinary Offerings with Fallback Images)
+    // -----------------------------------------------------------------------
+    const MENU_ITEMS = [
+      {
+        id: 'st-1',
+        name: 'Smoked Paneer Tikka Angara',
+        category: 'Starters',
+        price: 320,
+        veg: true,
+        special: true,
+        spice: 'Medium',
+        description: 'Chargrilled cottage cheese cubes marinated in hung curd, Kashmiri chili, and roasted cumin, served with mint chutney.',
+        image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=600&q=80',
+        emoji: '🧀'
+      },
+      {
+        id: 'st-2',
+        name: 'Murgh Malai Kebab',
+        category: 'Starters',
+        price: 380,
+        veg: false,
+        special: true,
+        spice: 'Mild',
+        description: 'Succulent chicken morsels infused with cream cheese, cardamom, and white pepper, blistered in our clay tandoor.',
+        image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍢'
+      },
+      {
+        id: 'st-3',
+        name: 'Crispy Lotus Stem Honey Chili',
+        category: 'Starters',
+        price: 290,
+        veg: true,
+        special: false,
+        spice: 'Medium',
+        description: 'Thinly sliced lotus root wok-tossed with toasted sesame seeds, spring onions, and wildflower honey glaze.',
+        image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+        emoji: '🥢'
+      },
+      {
+        id: 'st-4',
+        name: 'Tandoori Prawns Ajwaini',
+        category: 'Starters',
+        price: 460,
+        veg: false,
+        special: false,
+        spice: 'Spicy',
+        description: 'Jumbo tiger prawns marinated with carom seeds, turmeric, and lemon juice, flame-roasted over live embers.',
+        image: 'https://images.unsplash.com/photo-1559742811-822873691df8?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍤'
+      },
+      {
+        id: 'mc-1',
+        name: 'Old Delhi Butter Chicken',
+        category: 'Main Course',
+        price: 440,
+        veg: false,
+        special: true,
+        spice: 'Mild',
+        description: 'Tandoor-roasted chicken tikka simmered in a velvety San Marzano tomato, cashew, and fenugreek butter gravy.',
+        image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍛'
+      },
+      {
+        id: 'mc-2',
+        name: '24-Hour Dal Makhani Ember',
+        category: 'Main Course',
+        price: 340,
+        veg: true,
+        special: true,
+        spice: 'Mild',
+        description: 'Whole black urad lentils slow-cooked overnight on dying charcoal embers with white butter and cream.',
+        image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍲'
+      },
+      {
+        id: 'mc-3',
+        name: 'Paneer Lababdar',
+        category: 'Main Course',
+        price: 360,
+        veg: true,
+        special: false,
+        spice: 'Medium',
+        description: 'Soft paneer cubes in a rich, mildly spiced onion-tomato masala finished with grated cottage cheese and ginger juliennes.',
+        image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80',
+        emoji: '🥘'
+      },
+      {
+        id: 'mc-4',
+        name: 'Rajasthani Laal Maas',
+        category: 'Main Course',
+        price: 520,
+        veg: false,
+        special: false,
+        spice: 'Spicy',
+        description: 'Traditional slow-braised lamb curry cooked with fiery Mathania red chilies, garlic, and smoky cloves.',
+        image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍖'
+      },
+      {
+        id: 'br-1',
+        name: 'Subz Dum Pukht Biryani',
+        category: 'Breads & Rice',
+        price: 350,
+        veg: true,
+        special: false,
+        spice: 'Medium',
+        description: 'Aged long-grain basmati rice layered with seasonal vegetables, saffron milk, and caramelized onions; served with burani raita.',
+        image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍚'
+      },
+      {
+        id: 'br-2',
+        name: 'Hyderabadi Chicken Dum Biryani',
+        category: 'Breads & Rice',
+        price: 420,
+        veg: false,
+        special: true,
+        spice: 'Spicy',
+        description: 'Aromatic basmati rice and spiced chicken sealed in a handi with fresh mint, kewra essence, and crispy shallots.',
+        image: 'https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=600&q=80',
+        emoji: '🥘'
+      },
+      {
+        id: 'br-3',
+        name: 'Truffle Garlic Butter Naan',
+        category: 'Breads & Rice',
+        price: 110,
+        veg: true,
+        special: false,
+        spice: 'Mild',
+        description: 'Leavened tandoori flatbread brushed with roasted garlic butter, fresh coriander, and a hint of white truffle oil.',
+        image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80',
+        emoji: '🫓'
+      },
+      {
+        id: 'ds-1',
+        name: 'Saffron Rasmalai Tres Leches',
+        category: 'Desserts',
+        price: 240,
+        veg: true,
+        special: true,
+        spice: 'Sweet',
+        description: 'Fusion sponge soaked in cardamom-saffron reduced milk, topped with roasted pistachios and dried rose petals.',
+        image: 'https://images.unsplash.com/photo-1666190092689-e3968aa0c32c?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍮'
+      },
+      {
+        id: 'ds-2',
+        name: 'Warm Gulab Jamun & Rabri',
+        category: 'Desserts',
+        price: 210,
+        veg: true,
+        special: false,
+        spice: 'Sweet',
+        description: 'Golden khoya dumplings steeped in rose-cardamom syrup, served over chilled thickened almond rabri.',
+        image: 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍨'
+      },
+      {
+        id: 'bv-1',
+        name: 'Smoked Kokum & Mint Cooler',
+        category: 'Beverages',
+        price: 160,
+        veg: true,
+        special: false,
+        spice: 'Refreshing',
+        description: 'Tangy coastal kokum reduction muddled with garden mint, roasted cumin, black salt, and sparkling soda.',
+        image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
+        emoji: '🍹'
+      },
+      {
+        id: 'bv-2',
+        name: 'Alphonso Mango Lassi',
+        category: 'Beverages',
+        price: 180,
+        veg: true,
+        special: true,
+        spice: 'Sweet',
+        description: 'Creamy churned yogurt blended with Ratnagiri Alphonso mango pulp and topped with saffron strands.',
+        image: 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=600&q=80',
+        emoji: '🥭'
+      }
+    ];
+
+    const CATEGORIES = ['All', 'Starters', 'Main Course', 'Breads & Rice', 'Desserts', 'Beverages'];
+
+    // -----------------------------------------------------------------------
+    // 2. APPLICATION STATE
+    // -----------------------------------------------------------------------
+    let state = {
+      tableNumber: '04',
+      selectedCategory: 'All',
+      dietaryFilter: 'all', // 'all' | 'veg' | 'non-veg' | 'special'
+      searchQuery: '',
+      cart: {}, // { dishId: quantity }
+      specialInstructions: '',
+      paymentMethod: 'upi', // 'upi' | 'card' | 'cash'
+      selectedUpiApp: '',
+      activeOrder: null, // Stores confirmed order object for Live Tracker
+      orderStageTimer: null
+    };
+
+    // -----------------------------------------------------------------------
+    // 3. INITIALIZATION & URL TABLE PARAMETER PARSING
+    // -----------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check if opened via QR URL with ?table=XX
+      const urlParams = new URLSearchParams(window.location.search);
+      const tableParam = urlParams.get('table');
+      if (tableParam && /^[0-9]{1,2}$/.test(tableParam)) {
+        state.tableNumber = tableParam.padStart(2, '0');
+      }
+
+      updateTableDisplays();
+      renderCategoryTabs();
+      renderMenu();
+      renderCartUI();
+      renderTableSelectorGrid();
+    });
+
+    // -----------------------------------------------------------------------
+    // 4. TABLE NUMBER & DYNAMIC QR CODE GENERATION
+    // -----------------------------------------------------------------------
+    function updateTableDisplays() {
+      const formatted = `#${state.tableNumber}`;
+      document.getElementById('headerTableNumber').textContent = formatted;
+      document.getElementById('heroTableLabel').textContent = `Table ${formatted}`;
+      document.getElementById('desktopCartTableLabel').textContent = `Table ${formatted}`;
+      document.getElementById('mobileBarTableNum').textContent = formatted;
+      document.getElementById('drawerTableLabel').textContent = formatted;
+      document.getElementById('qrModalTableNumber').textContent = formatted;
+      document.getElementById('checkoutTableNum').textContent = formatted;
+      document.getElementById('cashPanelTable').textContent = `Table ${formatted}`;
+    }
+
+    function openQrModal() {
+      const modal = document.getElementById('qrModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      // Build realistic table URL based on current location
+      const baseUrl = window.location.href.split('?')[0];
+      const tableUrl = `${baseUrl}?table=${state.tableNumber}`;
+      document.getElementById('qrUrlPreview').textContent = `spiceandember.menu/?table=${state.tableNumber}`;
+
+      // Clear previous QR & generate fresh scannable QR code
+      const qrContainer = document.getElementById('qrcodeCanvas');
+      qrContainer.innerHTML = '';
+      try {
+        new QRCode(qrContainer, {
+          text: tableUrl,
+          width: 176,
+          height: 176,
+          colorDark: '#181412',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        qrContainer.innerHTML = `<div class="w-44 h-44 bg-stone-100 flex items-center justify-center text-xs text-stone-500 p-4 rounded-xl">QR Ready for Table #${state.tableNumber}</div>`;
+      }
+    }
+
+    function closeQrModal() {
+      const modal = document.getElementById('qrModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function copyTableLink() {
+      const baseUrl = window.location.href.split('?')[0];
+      const shareUrl = `${baseUrl}?table=${state.tableNumber}`;
+      const tempInput = document.createElement('input');
+      tempInput.value = shareUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        const btnText = document.getElementById('copyLinkText');
+        btnText.textContent = 'Copied!';
+        showToast(`Table #${state.tableNumber} menu link copied!`);
+        setTimeout(() => { btnText.textContent = 'Copy Link'; }, 2000);
+      } catch (err) {
+        showToast('Unable to copy link');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function renderTableSelectorGrid() {
+      const grid = document.getElementById('tableGrid');
+      let html = '';
+      for (let i = 1; i <= 16; i++) {
+        const num = String(i).padStart(2, '0');
+        const isSelected = num === state.tableNumber;
+        html += `
+          <button
+            onclick="selectTable('${num}')"
+            class="py-2.5 rounded-xl text-sm font-bold border transition cursor-pointer ${
+              isSelected
+                ? 'bg-ember-600 text-white border-ember-600 shadow-sm'
+                : 'bg-stone-50 hover:bg-amber-50 text-stone-800 border-stone-200'
+            }">
+            #${num}
+          </button>
+        `;
+      }
+      grid.innerHTML = html;
+    }
+
+    function openTableModal() {
+      renderTableSelectorGrid();
+      const modal = document.getElementById('tableModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeTableModal() {
+      const modal = document.getElementById('tableModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function selectTable(num) {
+      state.tableNumber = num;
+      updateTableDisplays();
+      closeTableModal();
+      showToast(`Switched to Table #${num}`);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. MENU FILTERING, SEARCH & RENDERING
+    // -----------------------------------------------------------------------
+    function renderCategoryTabs() {
+      const container = document.getElementById('categoryTabsContainer');
+      container.innerHTML = CATEGORIES.map(cat => {
+        const active = state.selectedCategory === cat;
+        return `
+          <button
+            onclick="selectCategory('${cat}')"
+            class="shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer ${
+              active
+                ? 'bg-ember-600 text-white shadow-sm'
+                : 'bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-100 border border-stone-200/80'
+            }">
+            ${cat}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCategory(cat) {
+      state.selectedCategory = cat;
+      renderCategoryTabs();
+      renderMenu();
+    }
+
+    function setDietaryFilter(filter) {
+      state.dietaryFilter = filter;
+      document.querySelectorAll('.diet-pill').forEach(btn => {
+        btn.classList.remove('bg-stone-900', 'text-white', 'border-stone-900');
+        btn.classList.add('bg-white', 'text-stone-700', 'border-stone-200');
+      });
+      const activeBtn = document.getElementById(`diet-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-white', 'text-stone-700', 'border-stone-200');
+        activeBtn.classList.add('bg-stone-900', 'text-white', 'border-stone-900');
+      }
+      renderMenu();
+    }
+
+    function handleSearch(val) {
+      state.searchQuery = val.trim().toLowerCase();
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (state.searchQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderMenu();
+    }
+
+    function clearSearch() {
+      document.getElementById('menuSearchInput').value = '';
+      handleSearch('');
+    }
+
+    function resetAllFilters() {
+      state.selectedCategory = 'All';
+      state.dietaryFilter = 'all';
+      clearSearch();
+      setDietaryFilter('all');
+      renderCategoryTabs();
+      renderMenu();
+    }
+
+    function getFilteredDishes() {
+      return MENU_ITEMS.filter(dish => {
+        // Category filter
+        if (state.selectedCategory !== 'All' && dish.category !== state.selectedCategory) {
+          return false;
+        }
+        // Dietary filter
+        if (state.dietaryFilter === 'veg' && !dish.veg) return false;
+        if (state.dietaryFilter === 'non-veg' && dish.veg) return false;
+        if (state.dietaryFilter === 'special' && !dish.special) return false;
+
+        // Search query
+        if (state.searchQuery) {
+          const haystack = `${dish.name} ${dish.description} ${dish.category}`.toLowerCase();
+          if (!haystack.includes(state.searchQuery)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderMenu() {
+      const filtered = getFilteredDishes();
+      const grid = document.getElementById('menuGrid');
+      const emptyState = document.getElementById('emptyMenuState');
+
+      document.getElementById('currentCategoryTitle').textContent =
+        state.selectedCategory === 'All' ? 'All Menu Items' : state.selectedCategory;
+      document.getElementById('dishCountSubtitle').textContent =
+        `Showing ${filtered.length} ${filtered.length === 1 ? 'dish' : 'dishes'}`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      grid.innerHTML = filtered.map(dish => {
+        const qty = state.cart[dish.id] || 0;
+        const fallbackUrl = `https://placehold.co/600x400/241e1b/fdba8c?text=${encodeURIComponent(dish.name)}`;
+
+        return `
+          <article class="bg-white rounded-3xl border border-stone-200/80 shadow-xs hover:shadow-md transition overflow-hidden flex flex-col justify-between group">
+            <div>
+              <!-- Dish Image with Dietary & Special Badges -->
+              <div class="relative h-44 sm:h-48 bg-stone-100 overflow-hidden">
+                <img
+                  src="${dish.image}"
+                  onerror="this.onerror=null;this.src='${fallbackUrl}';"
+                  alt="${dish.name}"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+
+                <!-- Top Left Veg / Non-Veg Symbol -->
+                <div class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs px-2 py-1 rounded-lg shadow-xs flex items-center gap-1.5">
+                  <span class="w-3.5 h-3.5 border ${dish.veg ? 'border-emerald-600' : 'border-rose-600'} rounded-sm flex items-center justify-center">
+                    <span class="w-2 h-2 rounded-full ${dish.veg ? 'bg-emerald-600' : 'bg-rose-600'}"></span>
+                  </span>
+                  <span class="text-[10px] font-bold uppercase tracking-wide ${dish.veg ? 'text-emerald-700' : 'text-rose-700'}">
+                    ${dish.veg ? 'Veg' : 'Non-Veg'}
+                  </span>
+                </div>
+
+                <!-- Top Right Chef's Special Tag -->
+                ${dish.special ? `
+                  <div class="absolute top-3 right-3 bg-amber-400 text-stone-950 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-xs">
+                    ★ Chef's Special
+                  </div>
+                ` : ''}
+
+                <!-- Bottom Left Category & Spice Level -->
+                <div class="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-xs">
+                  <span class="bg-black/45 backdrop-blur-xs px-2.5 py-0.5 rounded-md font-medium">${dish.category}</span>
+                  <span class="bg-black/45 backdrop-blur-xs px-2 py-0.5 rounded-md text-[11px]">🌶️ ${dish.spice}</span>
+                </div>
+              </div>
+
+              <!-- Dish Title & Description -->
+              <div class="p-4 pb-2">
+                <div class="flex items-start justify-between gap-2">
+                  <h4 class="font-serif font-bold text-base sm:text-lg text-stone-900 leading-snug">${dish.name}</h4>
+                </div>
+                <p class="text-xs text-stone-500 mt-1.5 line-clamp-2 leading-relaxed">
+                  ${dish.description}
+                </p>
+              </div>
+            </div>
+
+            <!-- Price & Add to Cart Controls -->
+            <div class="px-4 pb-4 pt-3 flex items-center justify-between border-t border-stone-100 mt-2">
+              <div>
+                <span class="text-xs text-stone-400 block">Price</span>
+                <span class="text-lg font-bold text-stone-900">₹${dish.price}</span>
+              </div>
+
+              ${qty === 0 ? `
+                <button
+                  onclick="updateQuantity('${dish.id}', 1)"
+                  class="bg-ember-50 hover:bg-ember-600 text-ember-700 hover:text-white border border-ember-200 hover:border-ember-600 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                  <span>+ Add</span>
+                </button>
+              ` : `
+                <div class="flex items-center bg-ember-600 text-white rounded-xl shadow-sm overflow-hidden">
+                  <button
+                    onclick="updateQuantity('${dish.id}', -1)"
+                    class="w-9 h-9 flex items-center justify-center hover:bg-ember-700 font-bold text-base transition cursor-pointer"
+                    aria-label="Decrease quantity">
+                    −
+                  </button>
+                  <span class="w-8 text-center text-sm font-bold">${qty}</span>
+                  <button
+                    onclick="updateQuantity('${dish.id}', 1)"
+                    class="w-9 h-9 flex items-center justify-center hover:bg-ember-700 font-bold text-base transition cursor-pointer"
+                    aria-label="Increase quantity">
+                    +
+                  </button>
+                </div>
+              `}
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. CART MANAGEMENT & BILL CALCULATION
+    // -----------------------------------------------------------------------
+    function updateQuantity(dishId, delta) {
+      const currentQty = state.cart[dishId] || 0;
+      const nextQty = currentQty + delta;
+      const dish = MENU_ITEMS.find(d => d.id === dishId);
+
+      if (nextQty <= 0) {
+        delete state.cart[dishId];
+        if (dish) showToast(`Removed ${dish.name}`);
+      } else {
+        state.cart[dishId] = nextQty;
+        if (currentQty === 0 && dish) {
+          showToast(`Added ${dish.name} to order`);
+        }
+      }
+
+      renderMenu();
+      renderCartUI();
+    }
+
+    function updateInstructions(val) {
+      state.specialInstructions = val;
+      // Sync between desktop sidebar textarea and mobile drawer textarea if both exist
+      document.querySelectorAll('.special-instructions-input').forEach(el => {
+        if (el.value !== val) el.value = val;
+      });
+    }
+
+    function getCartSummary() {
+      let totalItems = 0;
+      let subtotal = 0;
+      const items = [];
+
+      for (const [dishId, qty] of Object.entries(state.cart)) {
+        const dish = MENU_ITEMS.find(d => d.id === dishId);
+        if (dish && qty > 0) {
+          const lineTotal = dish.price * qty;
+          totalItems += qty;
+          subtotal += lineTotal;
+          items.push({ ...dish, qty, lineTotal });
+        }
+      }
+
+      const gst = Math.round(subtotal * 0.05);
+      const grandTotal = subtotal + gst;
+      return { items, totalItems, subtotal, gst, grandTotal };
+    }
+
+    function buildCartHtml(summary) {
+      if (summary.items.length === 0) {
+        return `
+          <div class="text-center py-10 px-4">
+            <div class="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 text-3xl">
+              🛒
+            </div>
+            <h4 class="font-serif font-bold text-stone-900 text-lg">Your table plate is empty</h4>
+            <p class="text-xs text-stone-500 mt-1 max-w-xs mx-auto leading-relaxed">
+              Add delicious starters, curries, or freshly baked naan from the menu to start your order.
+            </p>
+          </div>
+        `;
+      }
+
+      const itemsListHtml = summary.items.map(item => `
+        <div class="flex items-center justify-between gap-3 py-3 border-b border-stone-100 last:border-none">
+          <div class="flex items-start gap-2.5 min-w-0">
+            <span class="mt-1 w-3.5 h-3.5 border ${item.veg ? 'border-emerald-600' : 'border-rose-600'} rounded-sm flex items-center justify-center shrink-0">
+              <span class="w-2 h-2 rounded-full ${item.veg ? 'bg-emerald-600' : 'bg-rose-600'}"></span>
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-stone-900 truncate">${item.name}</p>
+              <p class="text-xs text-stone-500">₹${item.price} × ${item.qty}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5 shrink-0">
+            <div class="flex items-center bg-stone-100 rounded-lg border border-stone-200">
+              <button onclick="updateQuantity('${item.id}', -1)" class="w-7 h-7 flex items-center justify-center text-stone-700 hover:bg-stone-200 rounded-l-lg font-bold text-sm cursor-pointer">−</button>
+              <span class="w-6 text-center text-xs font-bold text-stone-900">${item.qty}</span>
+              <button onclick="updateQuantity('${item.id}', 1)" class="w-7 h-7 flex items-center justify-center text-stone-700 hover:bg-stone-200 rounded-r-lg font-bold text-sm cursor-pointer">+</button>
+            </div>
+            <span class="text-sm font-bold text-stone-900 w-14 text-right">₹${item.lineTotal}</span>
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="space-y-4">
+          <div class="divide-y divide-stone-100">
+            ${itemsListHtml}
+          </div>
+
+          <!-- Special Cooking Instructions -->
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1.5">
+              Special Cooking Instructions (Optional)
+            </label>
+            <textarea
+              rows="2"
+              oninput="updateInstructions(this.value)"
+              placeholder="e.g., Less spicy, extra mint chutney, no onions..."
+              class="special-instructions-input w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-ember-500/40 focus:border-ember-500"
+            >${state.specialInstructions}</textarea>
+          </div>
+
+          <!-- Bill Breakdown -->
+          <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200/80 space-y-2 text-xs">
+            <div class="flex justify-between text-stone-600">
+              <span>Item Subtotal</span>
+              <span class="font-medium">₹${summary.subtotal}</span>
+            </div>
+            <div class="flex justify-between text-stone-600">
+              <span>GST (5%)</span>
+              <span class="font-medium">₹${summary.gst}</span>
+            </div>
+            <div class="flex justify-between text-base font-bold text-stone-900 pt-2 border-t border-stone-200">
+              <span>Total Payable</span>
+              <span class="text-ember-700">₹${summary.grandTotal}</span>
+            </div>
+          </div>
+
+          <!-- Proceed to Checkout Button -->
+          <button
+            onclick="openCheckoutModal()"
+            class="w-full bg-ember-600 hover:bg-ember-700 text-white font-bold py-3.5 px-5 rounded-2xl shadow-lg shadow-ember-600/20 flex items-center justify-center gap-2 transition cursor-pointer">
+            <span>Proceed to Payment • ₹${summary.grandTotal}</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderCartUI() {
+      const summary = getCartSummary();
+      const cartHtml = buildCartHtml(summary);
+
+      // Update Desktop Sidebar & Slide-out Drawer
+      document.getElementById('desktopCartContainer').innerHTML = cartHtml;
+      document.getElementById('drawerCartContainer').innerHTML = cartHtml;
+
+      // Update Counters
+      document.getElementById('desktopCartBadge').textContent = summary.totalItems;
+      document.getElementById('desktopSidebarCount').textContent = `${summary.totalItems} ${summary.totalItems === 1 ? 'item' : 'items'}`;
+      document.getElementById('mobileBarItemCount').textContent = summary.totalItems;
+      document.getElementById('mobileBarTotal').textContent = `₹${summary.grandTotal}`;
+
+      // Toggle Mobile Sticky Bar Visibility
+      const mobileBar = document.getElementById('mobileStickyCartBar');
+      if (summary.totalItems > 0) {
+        mobileBar.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+      } else {
+        mobileBar.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+      }
+    }
+
+    function toggleCartDrawer(open) {
+      const drawer = document.getElementById('cartDrawer');
+      const backdrop = document.getElementById('cartDrawerBackdrop');
+      if (open) {
+        backdrop.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          drawer.classList.remove('translate-x-full');
+        });
+      } else {
+        drawer.classList.add('translate-x-full');
+        setTimeout(() => {
+          backdrop.classList.add('hidden');
+        }, 280);
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 7. CHECKOUT & PAYMENT METHODS (UPI, CARD, PAY AT TABLE)
+    // -----------------------------------------------------------------------
+    function openCheckoutModal() {
+      const summary = getCartSummary();
+      if (summary.totalItems === 0) return;
+
+      toggleCartDrawer(false);
+
+      document.getElementById('checkoutItemCount').textContent = summary.totalItems;
+      document.getElementById('checkoutPayableTotal').textContent = `₹${summary.grandTotal}`;
+      updateCheckoutButtonLabel();
+
+      // Render Merchant UPI QR inside checkout panel
+      const upiQrBox = document.getElementById('upiMerchantQr');
+      upiQrBox.innerHTML = '';
+      try {
+        new QRCode(upiQrBox, {
+          text: `upi://pay?pa=spiceember@icici&pn=SpiceAndEmber&am=${summary.grandTotal}&cu=INR`,
+          width: 68,
+          height: 68,
+          colorDark: '#181412',
+          colorLight: '#ffffff'
+        });
+      } catch (e) {
+        upiQrBox.innerHTML = '<div class="w-16 h-16 bg-stone-200 rounded-lg"></div>';
+      }
+
+      const modal = document.getElementById('checkoutModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCheckoutModal() {
+      const modal = document.getElementById('checkoutModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function selectPaymentMethod(method) {
+      state.paymentMethod = method;
+
+      // Update Tab Styling
+      ['upi', 'card', 'cash'].forEach(m => {
+        const tab = document.getElementById(`payTab-${m}`);
+        const panel = document.getElementById(`payPanel-${m}`);
+        if (m === method) {
+          tab.classList.remove('border-stone-200', 'bg-white', 'text-stone-700');
+          tab.classList.add('border-ember-600', 'bg-ember-50/70', 'text-ember-900');
+          panel.classList.remove('hidden');
+        } else {
+          tab.classList.remove('border-ember-600', 'bg-ember-50/70', 'text-ember-900');
+          tab.classList.add('border-stone-200', 'bg-white', 'text-stone-700');
+          panel.classList.add('hidden');
+        }
+      });
+
+      updateCheckoutButtonLabel();
+    }
+
+    function selectUpiApp(appName) {
+      state.selectedUpiApp = appName;
+      document.getElementById('upiErrorMsg').classList.add('hidden');
+      document.querySelectorAll('.upi-app-btn').forEach(btn => {
+        if (btn.textContent.trim().includes(appName)) {
+          btn.classList.add('border-ember-600', 'bg-ember-50', 'text-ember-800');
+        } else {
+          btn.classList.remove('border-ember-600', 'bg-ember-50', 'text-ember-800');
+        }
+      });
+      showToast(`${appName} selected for instant UPI payment`);
+    }
+
+    function updateCheckoutButtonLabel() {
+      const summary = getCartSummary();
+      const btnText = document.getElementById('confirmPaymentBtnText');
+      if (state.paymentMethod === 'cash') {
+        btnText.textContent = `Confirm Order (Pay ₹${summary.grandTotal} at Table)`;
+      } else {
+        btnText.textContent = `Pay ₹${summary.grandTotal} & Place Order`;
+      }
+    }
+
+    // Input formatting helpers for Card inputs
+    function formatCardNumber(input) {
+      let v = input.value.replace(/\D/g, '').substring(0, 16);
+      input.value = v.replace(/(.{4})/g, '$1 ').trim();
+    }
+
+    function formatCardExpiry(input) {
+      let v = input.value.replace(/\D/g, '').substring(0, 4);
+      if (v.length >= 3) {
+        input.value = `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+      } else {
+        input.value = v;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. PROCESS ORDER & LIVE ORDER TRACKER
+    // -----------------------------------------------------------------------
+    function processOrderPayment() {
+      const summary = getCartSummary();
+      if (summary.totalItems === 0) return;
+
+      // Validate active payment method inputs
+      if (state.paymentMethod === 'upi') {
+        const upiVal = document.getElementById('upiIdInput').value.trim();
+        const upiErr = document.getElementById('upiErrorMsg');
+        if (!state.selectedUpiApp && (!upiVal || !upiVal.includes('@'))) {
+          upiErr.classList.remove('hidden');
+          return;
+        }
+        upiErr.classList.add('hidden');
+      } else if (state.paymentMethod === 'card') {
+        const cardNum = document.getElementById('cardNumberInput').value.replace(/\s/g, '');
+        const cardExp = document.getElementById('cardExpiryInput').value.trim();
+        const cardCvv = document.getElementById('cardCvvInput').value.trim();
+        const cardErr = document.getElementById('cardErrorMsg');
+        if (cardNum.length < 12 || cardExp.length < 4 || cardCvv.length < 3) {
+          cardErr.classList.remove('hidden');
+          return;
+        }
+        cardErr.classList.add('hidden');
+      }
+
+      // Simulate brief payment processing state
+      const btn = document.getElementById('confirmPaymentBtn');
+      const btnText = document.getElementById('confirmPaymentBtnText');
+      btn.disabled = true;
+      btnText.textContent = 'Processing Order...';
+
+      setTimeout(() => {
+        btn.disabled = false;
+
+        // Generate Order ID & payment label
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        const orderId = `SE-${randomNum}`;
+        let paymentLabel = 'Paid via UPI';
+        if (state.paymentMethod === 'upi' && state.selectedUpiApp) {
+          paymentLabel = `Paid via ${state.selectedUpiApp}`;
+        } else if (state.paymentMethod === 'card') {
+          paymentLabel = 'Paid via Card';
+        } else if (state.paymentMethod === 'cash') {
+          paymentLabel = 'Pay at Table';
+        }
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Save Active Order
+        state.activeOrder = {
+          orderId,
+          tableNumber: state.tableNumber,
+          items: summary.items,
+          subtotal: summary.subtotal,
+          gst: summary.gst,
+          grandTotal: summary.grandTotal,
+          instructions: state.specialInstructions,
+          paymentLabel,
+          timestamp: timeStr,
+          stage: 2 // 1 = Placed, 2 = Preparing, 3 = Ready to Serve
+        };
+
+        // Clear current cart after successful placement
+        state.cart = {};
+        state.specialInstructions = '';
+        renderMenu();
+        renderCartUI();
+
+        // Show "Live Order" button in top navbar
+        const navTrackerBtn = document.getElementById('activeOrderNavBtn');
+        navTrackerBtn.classList.remove('hidden');
+        navTrackerBtn.classList.add('flex');
+
+        closeCheckoutModal();
+        openTrackerModal();
+        startAutoStageProgression();
+      }, 650);
+    }
+
+    function openTrackerModal() {
+      if (!state.activeOrder) return;
+      const order = state.activeOrder;
+
+      document.getElementById('trackerTableLabel').textContent = `Table #${order.tableNumber}`;
+      document.getElementById('trackerOrderId').textContent = `Order #${order.orderId}`;
+      document.getElementById('trackerPaymentBadge').textContent = order.paymentLabel;
+      document.getElementById('receiptTimestamp').textContent = order.timestamp;
+
+      // Render itemized digital receipt
+      document.getElementById('receiptItemsList').innerHTML = order.items.map(item => `
+        <div class="flex items-center justify-between text-xs sm:text-sm">
+          <span class="text-stone-800"><strong class="font-semibold">${item.qty}×</strong> ${item.name}</span>
+          <span class="font-semibold text-stone-900">₹${item.lineTotal}</span>
+        </div>
+      `).join('');
+
+      const noteBox = document.getElementById('receiptSpecialNote');
+      if (order.instructions) {
+        noteBox.textContent = `Note: "${order.instructions}"`;
+        noteBox.classList.remove('hidden');
+      } else {
+        noteBox.classList.add('hidden');
+      }
+
+      document.getElementById('receiptSubtotal').textContent = `₹${order.subtotal}`;
+      document.getElementById('receiptGst').textContent = `₹${order.gst}`;
+      document.getElementById('receiptTotal').textContent = `₹${order.grandTotal}`;
+
+      renderOrderStageUI();
+
+      const modal = document.getElementById('trackerModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeTrackerModal() {
+      const modal = document.getElementById('trackerModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderOrderStageUI() {
+      if (!state.activeOrder) return;
+      const stage = state.activeOrder.stage;
+
+      const step2Circle = document.getElementById('step2Circle');
+      const step3 = document.getElementById('step-3');
+      const step3Circle = document.getElementById('step3Circle');
+      const estTime = document.getElementById('trackerEstTime');
+      const simBtn = document.getElementById('simulateStageBtn');
+
+      if (stage === 2) {
+        step2Circle.className = 'w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0 animate-soft-pulse';
+        step2Circle.textContent = '2';
+        step3.classList.add('opacity-45');
+        step3Circle.className = 'w-8 h-8 rounded-full bg-stone-300 text-stone-700 flex items-center justify-center text-xs font-bold shrink-0';
+        step3Circle.textContent = '3';
+        estTime.textContent = '15–20 Mins';
+        simBtn.classList.remove('hidden');
+      } else if (stage >= 3) {
+        step2Circle.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0';
+        step2Circle.textContent = '✓';
+        step3.classList.remove('opacity-45');
+        step3Circle.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 animate-soft-pulse';
+        step3Circle.textContent = '✓';
+        estTime.textContent = 'Serving Now at Table!';
+        simBtn.classList.add('hidden');
+      }
+    }
+
+    function advanceOrderStage() {
+      if (!state.activeOrder) return;
+      if (state.activeOrder.stage < 3) {
+        state.activeOrder.stage = 3;
+        renderOrderStageUI();
+        showToast(`Order #${state.activeOrder.orderId} is Ready to Serve!`);
+      }
+    }
+
+    function startAutoStageProgression() {
+      if (state.orderStageTimer) clearTimeout(state.orderStageTimer);
+      // Automatically transition from Preparing -> Ready to Serve after 18 seconds for live realism
+      state.orderStageTimer = setTimeout(() => {
+        if (state.activeOrder && state.activeOrder.stage < 3) {
+          advanceOrderStage();
+        }
+      }, 18000);
+    }
+
+    // -----------------------------------------------------------------------
+    // 9. TOAST NOTIFICATION HELPER
+    // -----------------------------------------------------------------------
+    let toastTimeout = null;
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('opacity-0', '-translate-y-4');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-4');
+      }, 2400);
+    }
+  </script>
+</body>
+</html>
